@@ -1,0 +1,33 @@
+name: Generate index.json
+
+on:
+  push:
+    branches:
+      - main  # Change this if your default branch is different
+  workflow_dispatch:  # Allows manual execution from GitHub Actions
+
+jobs:
+  update-json:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Generate index.json
+        run: |
+          echo '{ "files": [' > index.json
+          for file in $(ls -p | grep -v / | grep -v index.json); do
+            size=$(stat -c%s "$file")
+            echo "{ \"name\": \"$file\", \"size\": \"${size} bytes\" }," >> index.json
+          done
+          sed -i '$ s/,$//' index.json
+          echo ']}' >> index.json
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add index.json
+          git commit -m "Auto-update index.json" || echo "No changes to commit"
+          git push
